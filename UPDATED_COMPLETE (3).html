@@ -1,0 +1,2164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Badminton Tournament - Live</title>
+    <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Firebase SDK v8 (More Stable) -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Lexend', sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: #e6e6e6;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container { max-width: 1400px; margin: 0 auto; }
+        .header {
+            background: linear-gradient(135deg, #0f3460, #16213e);
+            padding: 30px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+            position: relative;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+        .header h1 {
+            font-size: 2.2rem;
+            color: #00d4ff;
+            text-align: center;
+            margin-bottom: 15px;
+        }
+        .company-info {
+            text-align: center;
+            margin: 15px 0;
+        }
+        .company-name {
+            font-size: 1.4rem;
+            font-weight: 600;
+            color: #00d4ff;
+            margin-bottom: 5px;
+        }
+        .apl-name {
+            font-size: 1.2rem;
+            font-weight: 500;
+            color: #e94560;
+        }
+        .tagline {
+            text-align: center;
+            color: #8892b0;
+            margin-top: 10px;
+            font-size: 0.95rem;
+        }
+        #liveStatus {
+            text-align: center;
+            margin-top: 20px;
+            padding: 12px;
+            background: rgba(46, 204, 113, 0.1);
+            border-radius: 8px;
+            border: 1px solid rgba(46, 204, 113, 0.3);
+        }
+        .live-dot {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            background: #2ecc71;
+            border-radius: 50%;
+            margin-right: 8px;
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.6; transform: scale(1.1); }
+        }
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-family: 'Lexend', sans-serif;
+        }
+        .btn-primary { background: #00d4ff; color: #000; }
+        .btn-primary:hover { background: #00b8e6; transform: translateY(-2px); }
+        .btn-secondary { background: #e94560; color: #fff; }
+        .btn-secondary:hover { background: #d63651; transform: translateY(-2px); }
+        .btn-success { background: #2ecc71; color: #fff; }
+        .btn-success:hover { background: #27ae60; transform: translateY(-2px); }
+        .btn-warning { background: #f39c12; color: #fff; }
+        .btn-danger { background: #e74c3c; color: #fff; }
+        .auth-buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-top: 20px;
+        }
+        .logout-btn {
+            position: absolute;
+            top: 30px;
+            right: 30px;
+        }
+        .card {
+            background: #0f3460;
+            padding: 30px;
+            border-radius: 12px;
+            margin-bottom: 25px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+        }
+        .card h2 {
+            color: #00d4ff;
+            margin-bottom: 20px;
+            font-size: 1.6rem;
+        }
+        .hidden { display: none !important; }
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.85);
+            backdrop-filter: blur(5px);
+            z-index: 1000;
+            overflow-y: auto;
+        }
+        .modal-content {
+            background: #16213e;
+            margin: 80px auto;
+            padding: 35px;
+            max-width: 500px;
+            border-radius: 15px;
+            position: relative;
+            box-shadow: 0 15px 50px rgba(0,0,0,0.5);
+        }
+        .close {
+            position: absolute;
+            top: 15px;
+            right: 25px;
+            font-size: 32px;
+            cursor: pointer;
+            color: #e94560;
+            transition: color 0.3s;
+        }
+        .close:hover { color: #ff6b6b; }
+        .form-group {
+            margin-bottom: 22px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #00d4ff;
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+        .form-group input, .form-group select, .form-group textarea {
+            width: 100%;
+            padding: 14px;
+            background: #1a1a2e;
+            border: 2px solid #0f3460;
+            border-radius: 8px;
+            color: #e6e6e6;
+            font-family: 'Lexend', sans-serif;
+            font-size: 15px;
+            transition: border 0.3s;
+        }
+        .form-group input:focus, .form-group select:focus {
+            outline: none;
+            border-color: #00d4ff;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            padding: 16px;
+            text-align: left;
+            border-bottom: 1px solid #1a1a2e;
+        }
+        th {
+            background: #1a1a2e;
+            color: #00d4ff;
+            font-weight: 600;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+        }
+        tr:hover { background: #16213e; }
+        .badge {
+            display: inline-block;
+            padding: 6px 14px;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 600;
+        }
+        .badge-primary { background: #00d4ff; color: #000; }
+        .badge-success { background: #2ecc71; color: #fff; }
+        .badge-warning { background: #f39c12; color: #fff; }
+        .badge-danger { background: #e74c3c; color: #fff; }
+        .file-upload {
+            border: 3px dashed #00d4ff;
+            padding: 50px;
+            text-align: center;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .file-upload:hover {
+            background: rgba(0, 212, 255, 0.05);
+            border-color: #00b8e6;
+        }
+        .file-upload input { display: none; }
+        .tabs {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 25px;
+            border-bottom: 3px solid #1a1a2e;
+            flex-wrap: wrap;
+        }
+        .tab {
+            padding: 14px 22px;
+            background: transparent;
+            border: none;
+            color: #8892b0;
+            cursor: pointer;
+            font-weight: 600;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s;
+            margin-bottom: -3px;
+            font-size: 15px;
+        }
+        .tab.active {
+            color: #00d4ff;
+            border-bottom-color: #00d4ff;
+        }
+        .tab:hover { color: #00d4ff; }
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        .tournament-selector {
+            background: #1a1a2e;
+            padding: 22px;
+            border-radius: 12px;
+            margin-bottom: 25px;
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .status-bar {
+            padding: 18px;
+            background: #2c3e50;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 5px solid #f39c12;
+        }
+        .status-bar.frozen {
+            border-left-color: #2ecc71;
+        }
+        .match-result {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 18px;
+            background: #1a1a2e;
+            border-radius: 10px;
+            margin-bottom: 12px;
+        }
+        .winner { color: #2ecc71; font-weight: bold; }
+        @media (max-width: 768px) {
+            .container { padding: 10px; }
+            .header h1 { font-size: 1.6rem; }
+            .grid-2 { grid-template-columns: 1fr; }
+            .logout-btn { position: static; margin-top: 15px; width: 100%; }
+        }
+        
+        .copyright-footer {
+            position: fixed;
+            bottom: 15px;
+            right: 20px;
+            color: #8892b0;
+            font-size: 0.75rem;
+            z-index: 1000;
+            background: rgba(15, 52, 96, 0.8);
+            padding: 8px 15px;
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+        }
+        
+        @media (max-width: 768px) {
+            .copyright-footer {
+                font-size: 0.7rem;
+                padding: 6px 12px;
+                bottom: 10px;
+                right: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🏸 Badminton Tournament</h1>
+            <div class="company-info">
+                <p class="company-name">S K R & SMCS</p>
+                <p class="apl-name">Auditor's Premier League (APL)</p>
+            </div>
+            <p class="tagline">Inter-Company Doubles Championship - Men's & Women's</p>
+            
+            <div id="liveStatus" style="color: #f39c12;">
+                ⏳ Connecting to Firebase...
+            </div>
+            
+            <div style="text-align: center; margin-top: 15px;">
+                <button class="btn btn-primary" onclick="shareURL()" style="padding: 10px 20px;">
+                    📱 Share Tournament Link
+                </button>
+            </div>
+            
+            <div class="auth-buttons" id="authButtons">
+                <button class="btn btn-primary" onclick="showUserLogin()">Player Login</button>
+                <button class="btn btn-secondary" onclick="showAdminLogin()">Admin Login</button>
+            </div>
+            <button class="btn btn-danger logout-btn hidden" id="logoutBtn" onclick="logout()">Logout</button>
+            
+            <!-- Admin PDF Download Buttons -->
+            <div id="adminPDFButtons" class="hidden" style="position: absolute; top: 80px; right: 30px; display: flex; gap: 10px; flex-wrap: wrap;">
+                <button class="btn btn-success" onclick="downloadFixturesPDF()" style="padding: 10px 18px;">
+                    📥 Fixtures PDF
+                </button>
+                <button class="btn btn-primary" onclick="downloadResultsPDF()" style="padding: 10px 18px;">
+                    📊 Results PDF
+                </button>
+                <button class="btn btn-warning" onclick="downloadStandingsPDF()" style="padding: 10px 18px;">
+                    🏆 Standings PDF
+                </button>
+            </div>
+        </div>
+
+        <div id="app"></div>
+    </div>
+    
+    <!-- Copyright Footer -->
+    <div class="copyright-footer">
+        © Sharen Bhaskar
+    </div>
+
+    <div id="userModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('userModal')">&times;</span>
+            <h2 style="color: #00d4ff; margin-bottom: 25px;">Player Login</h2>
+            <div class="form-group">
+                <label>Email Address</label>
+                <input type="email" id="userEmail" placeholder="yourname@skrllp.com">
+            </div>
+            <button class="btn btn-primary" style="width: 100%;" onclick="loginUser()">Login</button>
+            <p id="userError" style="color: #e74c3c; margin-top: 15px;"></p>
+        </div>
+    </div>
+
+    <div id="adminModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('adminModal')">&times;</span>
+            <h2 style="color: #00d4ff; margin-bottom: 25px;">Admin Login</h2>
+            <div class="form-group">
+                <label>Admin ID</label>
+                <input type="text" id="adminId" placeholder="Admin ID">
+            </div>
+            <div class="form-group">
+                <label>Password</label>
+                <input type="password" id="adminPass" placeholder="Password">
+            </div>
+            <button class="btn btn-primary" style="width: 100%;" onclick="loginAdmin()">Login</button>
+            <p id="adminError" style="color: #e74c3c; margin-top: 15px;"></p>
+        </div>
+    </div>
+
+    <script>
+        // ========================================
+        // FIREBASE INITIALIZATION - IMPROVED
+        // ========================================
+        
+        let isFirebaseReady = false;
+        let retryCount = 0;
+        const MAX_RETRIES = 10;
+
+        // Try to initialize immediately
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('Page loaded, initializing Firebase...');
+            initializeFirebase();
+        });
+
+        function initializeFirebase() {
+            // Check if Firebase loaded
+            if (typeof firebase === 'undefined') {
+                retryCount++;
+                console.log(`Firebase not loaded yet. Retry ${retryCount}/${MAX_RETRIES}...`);
+                
+                if (retryCount < MAX_RETRIES) {
+                    setTimeout(initializeFirebase, 1000); // Wait 1 second
+                } else {
+                    document.getElementById('liveStatus').innerHTML = `
+                        <strong style="color: #e74c3c;">❌ Firebase Failed to Load</strong>
+                        <p style="font-size: 0.9rem; margin-top: 10px;">Please check your internet connection and refresh the page.</p>
+                    `;
+                }
+                return;
+            }
+
+            try {
+                // Firebase configuration
+                const firebaseConfig = {
+                    apiKey: "AIzaSyC69ueaWZkC9JgeOwVOz8rJ0KEfkbnIWxA",
+                    authDomain: "badminton-tournament-apl.firebaseapp.com",
+                    databaseURL: "https://badminton-tournament-apl-default-rtdb.asia-southeast1.firebasedatabase.app",
+                    projectId: "badminton-tournament-apl",
+                    storageBucket: "badminton-tournament-apl.firebasestorage.app",
+                    messagingSenderId: "880757981550",
+                    appId: "1:880757981550:web:d6bb251f65540d180d017f"
+                };
+
+                // Initialize Firebase
+                firebase.initializeApp(firebaseConfig);
+                window.db = firebase.database();
+                
+                // Enable offline persistence
+                window.db.ref('.info/connected').on('value', function(snap) {
+                    if (snap.val() === true) {
+                        console.log('🔥 Firebase Connected!');
+                        updateConnectionStatus(true);
+                    } else {
+                        console.log('⚠️ Firebase Disconnected');
+                        updateConnectionStatus(false);
+                    }
+                });
+
+                isFirebaseReady = true;
+                console.log('✅ Firebase Initialized Successfully!');
+                updateConnectionStatus(true);
+                
+            } catch (error) {
+                console.error('Firebase initialization error:', error);
+                document.getElementById('liveStatus').innerHTML = `
+                    <strong style="color: #e74c3c;">❌ Firebase Error</strong>
+                    <p style="font-size: 0.9rem; margin-top: 10px;">${error.message}</p>
+                `;
+            }
+        }
+
+        function updateConnectionStatus(connected) {
+            const statusEl = document.getElementById('liveStatus');
+            if (statusEl) {
+                if (connected) {
+                    statusEl.innerHTML = `
+                        <span class="live-dot"></span>
+                        <strong style="color: #2ecc71;">LIVE UPDATES ACTIVE</strong>
+                        <span style="color: #8892b0; margin-left: 10px;">All changes sync in real-time</span>
+                    `;
+                } else {
+                    statusEl.innerHTML = `
+                        <strong style="color: #f39c12;">⚠️ RECONNECTING...</strong>
+                        <span style="color: #8892b0; margin-left: 10px;">Attempting to restore connection</span>
+                    `;
+                }
+            }
+        }
+
+        // ========================================
+        // APP STATE  
+        // ========================================
+        const APP = {
+            user: null,
+            isAdmin: false,
+            activeTournament: 'men'
+        };
+
+        const ADMIN_CREDS = { id: 'Admin007', pass: 'SKRadmin@007' };
+        
+        let currentTab = 'emps';
+
+        // ========================================
+        // FIREBASE HELPERS (WITH ERROR HANDLING)
+        // ========================================
+        function saveToDB(path, data) {
+            if (!window.db) {
+                console.error('Firebase not initialized');
+                return Promise.reject('Firebase not ready');
+            }
+            return window.db.ref(path).set(data).catch(err => {
+                console.error('Error saving to Firebase:', err);
+                alert('Failed to save. Please check your internet connection.');
+            });
+        }
+
+        function updateDB(path, data) {
+            if (!window.db) {
+                console.error('Firebase not initialized');
+                return Promise.reject('Firebase not ready');
+            }
+            return window.db.ref(path).update(data).catch(err => {
+                console.error('Error updating Firebase:', err);
+                alert('Failed to update. Please check your internet connection.');
+            });
+        }
+
+        function listenDB(path, callback) {
+            if (!window.db) {
+                console.error('Firebase not initialized');
+                setTimeout(() => listenDB(path, callback), 1000);
+                return;
+            }
+            
+            window.db.ref(path).on('value', (snap) => {
+                const val = snap.val();
+                callback(val || {});
+            }, (error) => {
+                console.error('Error listening to Firebase:', error);
+                // Retry after 2 seconds
+                setTimeout(() => listenDB(path, callback), 2000);
+            });
+        }
+
+        function getDB(path) {
+            if (!window.db) {
+                console.error('Firebase not initialized');
+                return Promise.resolve({});
+            }
+            return window.db.ref(path).once('value')
+                .then(s => s.val() || {})
+                .catch(err => {
+                    console.error('Error reading from Firebase:', err);
+                    return {};
+                });
+        }
+
+        // ========================================
+        // HELPERS
+        // ========================================
+        function T() { return APP.activeTournament === 'men' ? "Men's" : "Women's"; }
+        function dbPath(suffix) { return `tournaments/${APP.activeTournament}/${suffix}`; }
+
+        // ========================================
+        // MODAL & UI
+        // ========================================
+        function showUserLogin() {
+            document.getElementById('userModal').style.display = 'block';
+        }
+
+        function showAdminLogin() {
+            document.getElementById('adminModal').style.display = 'block';
+        }
+
+        function closeModal(id) {
+            document.getElementById(id).style.display = 'none';
+        }
+
+        window.onclick = (e) => {
+            if (e.target.className === 'modal') e.target.style.display = 'none';
+        }
+
+        // ========================================
+        // SHARE URL
+        // ========================================
+        function shareURL() {
+            const url = window.location.href;
+            
+            // Copy to clipboard
+            navigator.clipboard.writeText(url).then(() => {
+                // Show shareable modal
+                const shareMsg = `
+                    <div style="background: #16213e; padding: 30px; border-radius: 15px; text-align: center;">
+                        <h2 style="color: #2ecc71; margin-bottom: 20px;">✅ Link Copied!</h2>
+                        <p style="color: #8892b0; margin-bottom: 15px;">Tournament URL:</p>
+                        <div style="background: #1a1a2e; padding: 15px; border-radius: 8px; margin-bottom: 20px; word-break: break-all;">
+                            <code style="color: #00d4ff; font-size: 14px;">${url}</code>
+                        </div>
+                        <p style="color: #e6e6e6; margin-bottom: 20px;">Share this link via:</p>
+                        <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
+                            <a href="https://wa.me/?text=${encodeURIComponent('Join Badminton Tournament (APL): ' + url)}" target="_blank" class="btn btn-success">
+                                📱 WhatsApp
+                            </a>
+                            <a href="mailto:?subject=Badminton Tournament&body=${encodeURIComponent('Tournament Link: ' + url)}" class="btn btn-primary">
+                                📧 Email
+                            </a>
+                            <button class="btn btn-secondary" onclick="closeShareModal()">Close</button>
+                        </div>
+                    </div>
+                `;
+                
+                const modal = document.createElement('div');
+                modal.id = 'shareModal';
+                modal.className = 'modal';
+                modal.style.display = 'block';
+                modal.innerHTML = `<div class="modal-content" style="max-width: 600px;">${shareMsg}</div>`;
+                document.body.appendChild(modal);
+            }).catch(() => {
+                // Fallback if clipboard doesn't work
+                alert('Tournament URL:\n\n' + url + '\n\nCopy this link to share!');
+            });
+        }
+
+        function closeShareModal() {
+            const modal = document.getElementById('shareModal');
+            if (modal) modal.remove();
+        }
+
+        // ========================================
+        // LOGIN
+        // ========================================
+        async function loginUser() {
+            const email = document.getElementById('userEmail').value.trim().toLowerCase();
+            
+            // Check both tournaments
+            let menEmps = await getDB('tournaments/men/employees');
+            let womenEmps = await getDB('tournaments/women/employees');
+            
+            menEmps = menEmps || {};
+            womenEmps = womenEmps || {};
+            
+            let emp = Object.values(menEmps).find(e => e.email && e.email.toLowerCase() === email);
+            let tour = 'men';
+            
+            if (!emp) {
+                emp = Object.values(womenEmps).find(e => e.email && e.email.toLowerCase() === email);
+                tour = 'women';
+            }
+            
+            if (!emp) {
+                document.getElementById('userError').textContent = 'Email not found';
+                return;
+            }
+
+            APP.user = {...emp, tour};
+            APP.isAdmin = false;
+            APP.activeTournament = tour;
+            closeModal('userModal');
+            renderUserDash();
+        }
+
+        async function loginAdmin() {
+            const id = document.getElementById('adminId').value.trim();
+            const pass = document.getElementById('adminPass').value.trim();
+            
+            if (id !== ADMIN_CREDS.id || pass !== ADMIN_CREDS.pass) {
+                document.getElementById('adminError').textContent = 'Invalid credentials';
+                return;
+            }
+
+            APP.isAdmin = true;
+            APP.user = {name: 'Admin'};
+            closeModal('adminModal');
+            renderAdminDash();
+        }
+
+        function logout() {
+            APP.user = null;
+            APP.isAdmin = false;
+            document.getElementById('authButtons').classList.remove('hidden');
+            document.getElementById('logoutBtn').classList.add('hidden');
+            document.getElementById('adminPDFButtons').classList.add('hidden');
+            document.getElementById('app').innerHTML = '';
+        }
+
+        // ========================================
+        // USER DASHBOARD
+        // ========================================
+        async function renderUserDash() {
+            document.getElementById('authButtons').classList.add('hidden');
+            document.getElementById('logoutBtn').classList.remove('hidden');
+            
+            const tour = APP.user.tour;
+            const teams = await getDB(`tournaments/${tour}/teams`) || {};
+            const teamsList = Object.values(teams);
+            
+            const team = teamsList.find(t => 
+                (t.p1 && t.p1.email === APP.user.email) || 
+                (t.p2 && t.p2.email === APP.user.email)
+            );
+
+            let html = `<div class="card">
+                <h2>Welcome, ${APP.user.name}!</h2>
+                <p style="color: #8892b0;">Tournament: <strong style="color: #00d4ff;">${tour === 'men' ? "Men's" : "Women's"}</strong></p>`;
+
+            if (team) {
+                html += `<div style="background: #1a1a2e; padding: 20px; border-radius: 10px; margin-top: 20px;">
+                    <h3 style="color: #00d4ff; margin-bottom: 10px;">${team.name}</h3>
+                    <p style="font-size: 1.1rem;">${team.p1.name} & ${team.p2.name}</p>
+                    <span class="badge badge-primary" style="margin-top: 10px;">${team.gender}</span>
+                </div></div>`;
+                
+                // Live fixtures and standings listener
+                listenDB(`tournaments/${tour}/fixtures`, async (fixtures) => {
+                    const results = await getDB(`tournaments/${tour}/results`) || {};
+                    const fixList = Object.values(fixtures || {});
+                    renderPlayerFixtures(tour, team, fixList, results);
+                    renderPlayerMatches(tour, team, fixList, results);
+                    renderUserStandings(tour, team, fixList, results);
+                });
+            } else {
+                html += `<p style="color: #8892b0; margin-top: 20px;">Not assigned to a team yet.</p></div>`;
+                document.getElementById('app').innerHTML = html;
+            }
+        }
+
+        function renderUserStandings(tour, team, fixtures, results) {
+            const groupFix = fixtures.filter(f => f.stage === 'Group');
+            
+            let html = `<div class="card">
+                <h2>📊 Complete Live Standings</h2>
+                <p style="color: #2ecc71; margin-bottom: 20px;">
+                    <span class="live-dot"></span> Updates in real-time
+                </p>`;
+            
+            // GROUP STAGE STANDINGS
+            if (groupFix.length > 0) {
+                const groups = [...new Set(groupFix.map(f => f.grp))];
+                html += `<h3 style="color: #00d4ff; margin-bottom: 15px;">📋 Group Stage Standings</h3>`;
+                groups.forEach(g => {
+                    const gMatches = groupFix.filter(f => f.grp === g);
+                    const teamNames = [...new Set([...gMatches.map(f => f.t1), ...gMatches.map(f => f.t2)])];
+                    
+                    const standings = teamNames.map(tn => {
+                        const matches = gMatches.filter(f => f.t1 === tn || f.t2 === tn);
+                        let w = 0, l = 0, pts = 0;
+                        matches.forEach(m => {
+                            const r = results[m.id];
+                            if (r) {
+                                if (r.w === tn) { w++; pts += 2; }
+                                else { l++; }
+                            }
+                        });
+                        return {name: tn, played: matches.filter(m => results[m.id]).length, w, l, pts};
+                    }).sort((a, b) => b.pts - a.pts || b.w - a.w);
+                    
+                    html += `<h4 style="color: #8892b0; margin-top: 20px;">Group ${g}</h4>
+                    <table><tr><th>Rank</th><th>Team</th><th>Played</th><th>Wins</th><th>Losses</th><th>Points</th></tr>`;
+                    standings.forEach((s, i) => {
+                        const highlight = s.name === team.name ? 'background: rgba(0, 212, 255, 0.15); font-weight: bold;' : '';
+                        html += `<tr style="${highlight}">
+                            <td>${i+1}</td>
+                            <td>${s.name}${s.name === team.name ? ' 👈' : ''}</td>
+                            <td>${s.played}</td>
+                            <td>${s.w}</td>
+                            <td>${s.l}</td>
+                            <td><strong>${s.pts}</strong></td>
+                        </tr>`;
+                    });
+                    html += `</table>`;
+                });
+            }
+            
+            // QUARTER FINAL STANDINGS
+            const qfMatches = fixtures.filter(f => f.stage === 'Quarter Final');
+            const qfResults = qfMatches.filter(m => results[m.id]);
+            if (qfResults.length > 0) {
+                html += `<h3 style="color: #f39c12; margin-top: 30px;">🏆 Quarter Final Results</h3>
+                <table><tr><th>Match</th><th>Winner (SF Qualified)</th><th>Runner-up</th></tr>`;
+                qfResults.forEach((m, i) => {
+                    const r = results[m.id];
+                    const loser = r.w === m.t1 ? m.t2 : m.t1;
+                    const highlight = (r.w === team.name || loser === team.name) ? 'background: rgba(0, 212, 255, 0.15);' : '';
+                    html += `<tr style="${highlight}">
+                        <td><strong>QF ${i+1}</strong></td>
+                        <td class="winner">${r.w}${r.w === team.name ? ' 👈' : ''}</td>
+                        <td>${loser}${loser === team.name ? ' 👈' : ''}</td>
+                    </tr>`;
+                });
+                html += `</table>`;
+            }
+            
+            // SEMI FINAL STANDINGS
+            const sfMatches = fixtures.filter(f => f.stage === 'Semi Final');
+            const sfResults = sfMatches.filter(m => results[m.id]);
+            if (sfResults.length > 0) {
+                html += `<h3 style="color: #e94560; margin-top: 30px;">🥉 Semi Final Results</h3>
+                <table><tr><th>Match</th><th>Winner (Finalist)</th><th>Runner-up</th></tr>`;
+                sfResults.forEach((m, i) => {
+                    const r = results[m.id];
+                    const loser = r.w === m.t1 ? m.t2 : m.t1;
+                    const highlight = (r.w === team.name || loser === team.name) ? 'background: rgba(0, 212, 255, 0.15);' : '';
+                    html += `<tr style="${highlight}">
+                        <td><strong>SF ${i+1}</strong></td>
+                        <td class="winner">${r.w}${r.w === team.name ? ' 👈' : ''}</td>
+                        <td>${loser}${loser === team.name ? ' 👈' : ''}</td>
+                    </tr>`;
+                });
+                html += `</table>`;
+            }
+            
+            // FINAL STANDINGS
+            const finalMatch = fixtures.find(f => f.stage === 'Final');
+            if (finalMatch && results[finalMatch.id]) {
+                const r = results[finalMatch.id];
+                const loser = r.w === finalMatch.t1 ? finalMatch.t2 : finalMatch.t1;
+                html += `<h3 style="color: #2ecc71; margin-top: 30px;">🏅 Tournament Final</h3>
+                <table><tr><th>Position</th><th>Team</th></tr>`;
+                const champHighlight = r.w === team.name ? 'background: rgba(255, 215, 0, 0.2);' : '';
+                const runnerHighlight = loser === team.name ? 'background: rgba(192, 192, 192, 0.2);' : '';
+                html += `<tr style="${champHighlight}">
+                    <td><strong style="color: #FFD700; font-size: 1.2rem;">🏆 CHAMPION</strong></td>
+                    <td class="winner" style="font-size: 1.1rem;"><strong>${r.w}${r.w === team.name ? ' 👈' : ''}</strong></td>
+                </tr>`;
+                html += `<tr style="${runnerHighlight}">
+                    <td><strong style="color: #C0C0C0; font-size: 1.1rem;">🥈 RUNNER-UP</strong></td>
+                    <td style="font-size: 1rem;">${loser}${loser === team.name ? ' 👈' : ''}</td>
+                </tr>`;
+                html += `</table>`;
+            }
+            
+            html += `</div>`;
+            
+            const existing = document.getElementById('app').innerHTML;
+            if (!existing.includes('Complete Live Standings')) {
+                document.getElementById('app').innerHTML += html;
+            } else {
+                const cards = document.querySelectorAll('.card');
+                if (cards.length > 1) {
+                    cards[cards.length - 1].outerHTML = html;
+                }
+            }
+        }
+
+        function renderPlayerFixtures(tour, team, fixtures, results) {
+            if (fixtures.length === 0) return;
+            
+            const sortedFix = [...fixtures].sort((a, b) => a.id - b.id);
+            
+            let html = `<div class="card">
+                <h2>📋 Complete Tournament Fixtures</h2>
+                <p style="color: #2ecc71; margin-bottom: 20px;">
+                    <span class="live-dot"></span> All matches - See who plays whom
+                </p>`;
+            
+            // Group Stage Fixtures
+            const groupFix = sortedFix.filter(f => f.stage === 'Group');
+            if (groupFix.length > 0) {
+                const groups = [...new Set(groupFix.map(f => f.grp))].sort();
+                html += `<h3 style="color: #00d4ff; margin-bottom: 15px;">📋 Group Stage Fixtures</h3>`;
+                
+                groups.forEach(g => {
+                    const gMatches = groupFix.filter(f => f.grp === g);
+                    html += `<h4 style="color: #8892b0; margin-top: 20px;">Group ${g}</h4>
+                    <table><tr><th>Match #</th><th>Team 1</th><th>Team 2</th><th>Court</th><th>Status</th></tr>`;
+                    gMatches.forEach(m => {
+                        const r = results[m.id];
+                        const status = r ? `<span class="badge badge-success">✅ Completed</span>` : `<span class="badge" style="background: #f39c12;">⏳ Pending</span>`;
+                        const isYourMatch = (m.t1 === team.name || m.t2 === team.name);
+                        const highlight = isYourMatch ? 'background: rgba(0, 212, 255, 0.15); font-weight: bold;' : '';
+                        
+                        html += `<tr style="${highlight}">
+                            <td><strong>#${m.id}</strong></td>
+                            <td>${m.t1}${m.t1 === team.name ? ' 👈' : ''}</td>
+                            <td>${m.t2}${m.t2 === team.name ? ' 👈' : ''}</td>
+                            <td><span class="badge" style="background: #2c3e50;">${m.court}</span></td>
+                            <td>${status}</td>
+                        </tr>`;
+                    });
+                    html += `</table>`;
+                });
+            }
+            
+            // Quarter Final Fixtures
+            const qfFix = sortedFix.filter(f => f.stage === 'Quarter Final');
+            if (qfFix.length > 0) {
+                html += `<h3 style="color: #f39c12; margin-top: 30px;">🏆 Quarter Final Fixtures</h3>
+                <table><tr><th>Match #</th><th>Team 1</th><th>Team 2</th><th>Court</th><th>Status</th></tr>`;
+                qfFix.forEach(m => {
+                    const r = results[m.id];
+                    const status = r ? `<span class="badge badge-success">✅ Completed</span>` : `<span class="badge" style="background: #f39c12;">⏳ Pending</span>`;
+                    const isYourMatch = (m.t1 === team.name || m.t2 === team.name);
+                    const highlight = isYourMatch ? 'background: rgba(0, 212, 255, 0.15); font-weight: bold;' : '';
+                    
+                    html += `<tr style="${highlight}">
+                        <td><strong>#${m.id}</strong></td>
+                        <td>${m.t1}${m.t1 === team.name ? ' 👈' : ''}</td>
+                        <td>${m.t2}${m.t2 === team.name ? ' 👈' : ''}</td>
+                        <td><span class="badge" style="background: #2c3e50;">${m.court}</span></td>
+                        <td>${status}</td>
+                    </tr>`;
+                });
+                html += `</table>`;
+            }
+            
+            // Semi Final Fixtures
+            const sfFix = sortedFix.filter(f => f.stage === 'Semi Final');
+            if (sfFix.length > 0) {
+                html += `<h3 style="color: #e94560; margin-top: 30px;">🥉 Semi Final Fixtures</h3>
+                <table><tr><th>Match #</th><th>Team 1</th><th>Team 2</th><th>Court</th><th>Status</th></tr>`;
+                sfFix.forEach(m => {
+                    const r = results[m.id];
+                    const status = r ? `<span class="badge badge-success">✅ Completed</span>` : `<span class="badge" style="background: #f39c12;">⏳ Pending</span>`;
+                    const isYourMatch = (m.t1 === team.name || m.t2 === team.name);
+                    const highlight = isYourMatch ? 'background: rgba(0, 212, 255, 0.15); font-weight: bold;' : '';
+                    
+                    html += `<tr style="${highlight}">
+                        <td><strong>#${m.id}</strong></td>
+                        <td>${m.t1}${m.t1 === team.name ? ' 👈' : ''}</td>
+                        <td>${m.t2}${m.t2 === team.name ? ' 👈' : ''}</td>
+                        <td><span class="badge" style="background: #2c3e50;">${m.court}</span></td>
+                        <td>${status}</td>
+                    </tr>`;
+                });
+                html += `</table>`;
+            }
+            
+            // Final Fixture
+            const finalFix = sortedFix.find(f => f.stage === 'Final');
+            if (finalFix) {
+                const r = results[finalFix.id];
+                const status = r ? `<span class="badge badge-success">✅ Completed</span>` : `<span class="badge" style="background: #f39c12;">⏳ Pending</span>`;
+                const isYourMatch = (finalFix.t1 === team.name || finalFix.t2 === team.name);
+                const highlight = isYourMatch ? 'background: rgba(255, 215, 0, 0.2); font-weight: bold;' : '';
+                
+                html += `<h3 style="color: #2ecc71; margin-top: 30px;">🏅 FINAL</h3>
+                <table><tr><th>Match #</th><th>Team 1</th><th>Team 2</th><th>Court</th><th>Status</th></tr>`;
+                html += `<tr style="${highlight}">
+                    <td><strong>#${finalFix.id}</strong></td>
+                    <td>${finalFix.t1}${finalFix.t1 === team.name ? ' 👈' : ''}</td>
+                    <td>${finalFix.t2}${finalFix.t2 === team.name ? ' 👈' : ''}</td>
+                    <td><span class="badge" style="background: #2c3e50;">${finalFix.court}</span></td>
+                    <td>${status}</td>
+                </tr>`;
+                html += `</table>`;
+            }
+            
+            html += `<p style="margin-top: 20px; color: #8892b0; text-align: center;">
+                <strong>Your matches are highlighted</strong> with 👈 and colored background
+            </p></div>`;
+            
+            const existing = document.getElementById('app').innerHTML;
+            if (!existing.includes('Complete Tournament Fixtures')) {
+                // Insert after team card
+                const cards = document.querySelectorAll('.card');
+                if (cards.length > 0) {
+                    cards[0].insertAdjacentHTML('afterend', html);
+                }
+            } else {
+                const cards = document.querySelectorAll('.card');
+                if (cards.length > 1) {
+                    cards[1].outerHTML = html;
+                }
+            }
+        }
+
+        function renderPlayerMatches(tour, team, fixtures, results) {
+            const teamMatches = fixtures.filter(f => f.t1 === team.name || f.t2 === team.name);
+            
+            if (teamMatches.length === 0) return;
+            
+            let html = `<div class="card">
+                <h2>⚔️ Your Match Schedule</h2>
+                <p style="color: #2ecc71; margin-bottom: 20px;">
+                    <span class="live-dot"></span> Who you're competing against
+                </p>`;
+            
+            // Group matches
+            const groupMatches = teamMatches.filter(f => f.stage === 'Group');
+            if (groupMatches.length > 0) {
+                html += `<h3 style="color: #00d4ff; margin-bottom: 15px;">📋 Group Stage Matches</h3>`;
+                groupMatches.forEach(m => {
+                    const opponent = m.t1 === team.name ? m.t2 : m.t1;
+                    const r = results[m.id];
+                    const status = r ? (r.w === team.name ? '✅ WON' : '❌ LOST') : '⏳ Upcoming';
+                    const statusColor = r ? (r.w === team.name ? '#2ecc71' : '#e74c3c') : '#f39c12';
+                    
+                    html += `<div class="match-result">
+                        <div>
+                            <strong style="color: #00d4ff;">Match #${m.id}</strong>
+                            <span style="margin-left: 15px;">vs <strong>${opponent}</strong></span>
+                        </div>
+                        <strong style="color: ${statusColor};">${status}</strong>
+                    </div>`;
+                });
+            }
+            
+            // QF match
+            const qfMatch = teamMatches.find(f => f.stage === 'Quarter Final');
+            if (qfMatch) {
+                const opponent = qfMatch.t1 === team.name ? qfMatch.t2 : qfMatch.t1;
+                const r = results[qfMatch.id];
+                const status = r ? (r.w === team.name ? '✅ WON - Advanced to SF' : '❌ LOST - Eliminated') : '⏳ Upcoming';
+                const statusColor = r ? (r.w === team.name ? '#2ecc71' : '#e74c3c') : '#f39c12';
+                
+                html += `<h3 style="color: #f39c12; margin-top: 25px;">🏆 Quarter Final</h3>
+                <div class="match-result">
+                    <div>
+                        <strong style="color: #f39c12;">Match #${qfMatch.id}</strong>
+                        <span style="margin-left: 15px;">vs <strong>${opponent}</strong></span>
+                    </div>
+                    <strong style="color: ${statusColor};">${status}</strong>
+                </div>`;
+            }
+            
+            // SF match
+            const sfMatch = teamMatches.find(f => f.stage === 'Semi Final');
+            if (sfMatch) {
+                const opponent = sfMatch.t1 === team.name ? sfMatch.t2 : sfMatch.t1;
+                const r = results[sfMatch.id];
+                const status = r ? (r.w === team.name ? '✅ WON - Advanced to Final!' : '❌ LOST - 3rd/4th Place') : '⏳ Upcoming';
+                const statusColor = r ? (r.w === team.name ? '#2ecc71' : '#e74c3c') : '#f39c12';
+                
+                html += `<h3 style="color: #e94560; margin-top: 25px;">🥉 Semi Final</h3>
+                <div class="match-result">
+                    <div>
+                        <strong style="color: #e94560;">Match #${sfMatch.id}</strong>
+                        <span style="margin-left: 15px;">vs <strong>${opponent}</strong></span>
+                    </div>
+                    <strong style="color: ${statusColor};">${status}</strong>
+                </div>`;
+            }
+            
+            // Final match
+            const finalMatch = teamMatches.find(f => f.stage === 'Final');
+            if (finalMatch) {
+                const opponent = finalMatch.t1 === team.name ? finalMatch.t2 : finalMatch.t1;
+                const r = results[finalMatch.id];
+                const status = r ? (r.w === team.name ? '🏆 CHAMPIONS!' : '🥈 RUNNER-UP') : '⏳ Upcoming - FINAL MATCH!';
+                const statusColor = r ? (r.w === team.name ? '#FFD700' : '#C0C0C0') : '#f39c12';
+                
+                html += `<h3 style="color: #2ecc71; margin-top: 25px;">🏅 FINAL</h3>
+                <div class="match-result">
+                    <div>
+                        <strong style="color: #2ecc71;">Match #${finalMatch.id}</strong>
+                        <span style="margin-left: 15px;">vs <strong>${opponent}</strong></span>
+                    </div>
+                    <strong style="color: ${statusColor}; font-size: 1.1rem;">${status}</strong>
+                </div>`;
+            }
+            
+            html += `</div>`;
+            
+            const existing = document.getElementById('app').innerHTML;
+            if (!existing.includes('Your Match Schedule')) {
+                // Insert after team card
+                const cards = document.querySelectorAll('.card');
+                if (cards.length > 0) {
+                    cards[0].insertAdjacentHTML('afterend', html);
+                }
+            } else {
+                const cards = document.querySelectorAll('.card');
+                if (cards.length > 2) {
+                    cards[1].outerHTML = html;
+                }
+            }
+        }
+
+        // ========================================
+        // ADMIN DASHBOARD
+        // ========================================
+        function renderAdminDash() {
+            document.getElementById('authButtons').classList.add('hidden');
+            document.getElementById('logoutBtn').classList.remove('hidden');
+            document.getElementById('adminPDFButtons').classList.remove('hidden');
+            
+            const html = `
+                <div class="tournament-selector">
+                    <span style="color: #8892b0; font-weight: 600;">Tournament:</span>
+                    <button class="btn ${APP.activeTournament === 'men' ? 'btn-primary' : 'btn-secondary'}" onclick="switchTour('men')">
+                        👨 Men's
+                    </button>
+                    <button class="btn ${APP.activeTournament === 'women' ? 'btn-primary' : 'btn-secondary'}" onclick="switchTour('women')">
+                        👩 Women's
+                    </button>
+                    <span style="margin-left: auto; color: #00d4ff; font-weight: bold;">
+                        Managing: ${T()}
+                    </span>
+                </div>
+
+                <div class="tabs">
+                    <button class="tab ${currentTab === 'emps' ? 'active' : ''}" onclick="switchTab('emps')">Employees</button>
+                    <button class="tab ${currentTab === 'teams' ? 'active' : ''}" onclick="switchTab('teams')">Teams</button>
+                    <button class="tab ${currentTab === 'fix' ? 'active' : ''}" onclick="switchTab('fix')">Fixtures</button>
+                    <button class="tab ${currentTab === 'res' ? 'active' : ''}" onclick="switchTab('res')">Results</button>
+                    <button class="tab ${currentTab === 'stand' ? 'active' : ''}" onclick="switchTab('stand')">Standings</button>
+                </div>
+
+                <div id="tabContent"></div>
+            `;
+            
+            document.getElementById('app').innerHTML = html;
+            renderTab();
+        }
+
+        function switchTour(t) {
+            APP.activeTournament = t;
+            renderAdminDash();
+        }
+
+        function switchTab(tab) {
+            currentTab = tab;
+            renderAdminDash();
+        }
+
+        function renderTab() {
+            if (currentTab === 'emps') renderEmps();
+            else if (currentTab === 'teams') renderTeams();
+            else if (currentTab === 'fix') renderFix();
+            else if (currentTab === 'res') renderRes();
+            else if (currentTab === 'stand') renderStand();
+        }
+
+
+        // ========================================
+        // EMPLOYEES TAB
+        // ========================================
+        async function renderEmps() {
+            const emps = await getDB(dbPath('employees')) || {};
+            const empsList = Object.values(emps);
+            
+            let html = `<div class="card">
+                <h2>${T()} Employees</h2>
+                <p style="color: #8892b0; margin-bottom: 20px;">Upload CSV: Name, Email, Gender</p>
+                
+                <div class="file-upload" onclick="document.getElementById('empFile').click()">
+                    <input type="file" id="empFile" accept=".csv" onchange="uploadEmps(event)">
+                    <div style="font-size: 3.5rem; margin-bottom: 15px;">📁</div>
+                    <strong style="font-size: 1.1rem;">Click to Upload CSV</strong>
+                    <p style="color: #8892b0; margin-top: 10px;">Format: Name, Email, Gender</p>
+                </div>`;
+            
+            if (empsList.length > 0) {
+                html += `<h3 style="margin-top: 30px; color: #00d4ff;">Employees (${empsList.length})</h3>
+                <table><tr><th>#</th><th>Name</th><th>Email</th><th>Gender</th></tr>`;
+                empsList.forEach((e, i) => {
+                    html += `<tr>
+                        <td>${i+1}</td>
+                        <td><strong>${e.name}</strong></td>
+                        <td>${e.email}</td>
+                        <td><span class="badge badge-primary">${e.gender}</span></td>
+                    </tr>`;
+                });
+                html += `</table>
+                <button class="btn btn-danger" style="margin-top: 20px;" onclick="clearEmps()">Clear All Employees</button>`;
+            }
+            
+            html += `</div>`;
+            document.getElementById('tabContent').innerHTML = html;
+        }
+
+        function uploadEmps(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = async function(ev) {
+                try {
+                    const lines = ev.target.result.split('\n').filter(l => l.trim());
+                    if (lines.length < 2) { alert('Need header + data'); return; }
+                    
+                    const heads = lines[0].toLowerCase().split(',').map(h => h.trim());
+                    const ni = heads.findIndex(h => h.includes('name'));
+                    const ei = heads.findIndex(h => h.includes('email'));
+                    const gi = heads.findIndex(h => h.includes('gender'));
+                    
+                    if (ni < 0 || ei < 0 || gi < 0) {
+                        alert('Need columns: Name, Email, Gender');
+                        return;
+                    }
+                    
+                    const emps = {};
+                    for (let i = 1; i < lines.length; i++) {
+                        const cols = lines[i].split(',').map(c => c.trim());
+                        if (cols.length >= 3 && cols[ni] && cols[ei]) {
+                            const g = cols[gi].toLowerCase();
+                            let gender = 'Unknown';
+                            if (g.includes('male') && !g.includes('female')) gender = 'Male';
+                            else if (g.includes('female')) gender = 'Female';
+                            
+                            const id = 'emp_' + Date.now() + '_' + i;
+                            emps[id] = {
+                                id,
+                                name: cols[ni],
+                                email: cols[ei].toLowerCase(),
+                                gender
+                            };
+                        }
+                    }
+                    
+                    if (Object.keys(emps).length === 0) {
+                        alert('No valid data');
+                        return;
+                    }
+                    
+                    await saveToDB(dbPath('employees'), emps);
+                    await saveToDB(dbPath('teams'), {});
+                    await saveToDB(dbPath('fixtures'), {});
+                    await saveToDB(dbPath('results'), {});
+                    
+                    alert(`Uploaded ${Object.keys(emps).length} employees to ${T()} tournament!`);
+                    renderEmps();
+                } catch (err) {
+                    alert('Error: ' + err.message);
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        async function clearEmps() {
+            if (confirm(`Delete all ${T().toLowerCase()} employees, teams, and fixtures?`)) {
+                await saveToDB(dbPath('employees'), {});
+                await saveToDB(dbPath('teams'), {});
+                await saveToDB(dbPath('fixtures'), {});
+                await saveToDB(dbPath('results'), {});
+                renderEmps();
+            }
+        }
+
+        // ========================================
+        // TEAMS TAB
+        // ========================================
+        async function renderTeams() {
+            const teams = await getDB(dbPath('teams')) || {};
+            const teamsList = Object.values(teams);
+            
+            let html = `<div class="card">
+                <h2>${T()} Teams</h2>
+                <p style="color: #8892b0; margin-bottom: 20px;">Upload CSV: Team Name, Player 1, Player 2</p>
+                
+                <div class="file-upload" onclick="document.getElementById('teamFile').click()">
+                    <input type="file" id="teamFile" accept=".csv" onchange="uploadTeams(event)">
+                    <div style="font-size: 3.5rem; margin-bottom: 15px;">📁</div>
+                    <strong style="font-size: 1.1rem;">Click to Upload CSV</strong>
+                    <p style="color: #8892b0; margin-top: 10px;">Format: Team Name, Player 1, Player 2</p>
+                </div>`;
+            
+            if (teamsList.length > 0) {
+                html += `<h3 style="margin-top: 30px; color: #00d4ff;">Teams (${teamsList.length})</h3>
+                <table><tr><th>#</th><th>Team</th><th>Player 1</th><th>Player 2</th><th>Gender</th></tr>`;
+                teamsList.forEach((t, i) => {
+                    html += `<tr>
+                        <td>${i+1}</td>
+                        <td><strong style="color: #00d4ff;">${t.name}</strong></td>
+                        <td>${t.p1.name}</td>
+                        <td>${t.p2.name}</td>
+                        <td><span class="badge badge-primary">${t.gender}</span></td>
+                    </tr>`;
+                });
+                html += `</table>
+                <button class="btn btn-danger" style="margin-top: 20px;" onclick="clearTeams()">Clear All Teams</button>`;
+            }
+            
+            html += `</div>`;
+            document.getElementById('tabContent').innerHTML = html;
+        }
+
+        async function uploadTeams(e) {
+            const emps = await getDB(dbPath('employees')) || {};
+            const empsList = Object.values(emps);
+            
+            if (empsList.length === 0) {
+                alert('Upload employees first');
+                return;
+            }
+            
+            const file = e.target.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = async function(ev) {
+                try {
+                    const lines = ev.target.result.split('\n').filter(l => l.trim());
+                    if (lines.length < 2) { alert('Need header + data'); return; }
+                    
+                    const heads = lines[0].toLowerCase().split(',').map(h => h.trim());
+                    const ti = heads.findIndex(h => h.includes('team'));
+                    const p1i = heads.findIndex(h => h.includes('player') && h.includes('1'));
+                    const p2i = heads.findIndex(h => h.includes('player') && h.includes('2'));
+                    
+                    if (ti < 0 || p1i < 0 || p2i < 0) {
+                        alert('Need columns: Team Name, Player 1, Player 2');
+                        return;
+                    }
+                    
+                    const teams = {};
+                    for (let i = 1; i < lines.length; i++) {
+                        const cols = lines[i].split(',').map(c => c.trim());
+                        if (cols.length >= 3 && cols[ti] && cols[p1i] && cols[p2i]) {
+                            const p1 = empsList.find(e => e.name.toLowerCase() === cols[p1i].toLowerCase());
+                            const p2 = empsList.find(e => e.name.toLowerCase() === cols[p2i].toLowerCase());
+                            
+                            if (!p1 || !p2) {
+                                alert(`Players not found in: ${cols[ti]}`);
+                                continue;
+                            }
+                            if (p1.gender !== p2.gender) {
+                                alert(`Same gender required: ${cols[ti]}`);
+                                continue;
+                            }
+                            
+                            const id = 'team_' + Date.now() + '_' + i;
+                            teams[id] = {
+                                id,
+                                name: cols[ti],
+                                p1,
+                                p2,
+                                gender: p1.gender
+                            };
+                        }
+                    }
+                    
+                    if (Object.keys(teams).length === 0) {
+                        alert('No valid teams');
+                        return;
+                    }
+                    
+                    await saveToDB(dbPath('teams'), teams);
+                    await saveToDB(dbPath('fixtures'), {});
+                    await saveToDB(dbPath('results'), {});
+                    
+                    alert(`Uploaded ${Object.keys(teams).length} teams to ${T()} tournament!`);
+                    renderTeams();
+                } catch (err) {
+                    alert('Error: ' + err.message);
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        async function clearTeams() {
+            if (confirm(`Delete all ${T().toLowerCase()} teams and fixtures?`)) {
+                await saveToDB(dbPath('teams'), {});
+                await saveToDB(dbPath('fixtures'), {});
+                await saveToDB(dbPath('results'), {});
+                renderTeams();
+            }
+        }
+
+
+        // ========================================
+        // FIXTURES TAB
+        // ========================================
+        async function renderFix() {
+            const teams = await getDB(dbPath('teams')) || {};
+            const teamsList = Object.values(teams);
+            const fixtures = await getDB(dbPath('fixtures')) || {};
+            const fixList = Object.values(fixtures);
+            
+            let html = `<div class="card">
+                <h2>${T()} Fixtures</h2>`;
+            
+            if (teamsList.length >= 2) {
+                html += `<div class="grid-2" style="margin: 20px 0;">
+                    <div class="form-group">
+                        <label>Number of Groups</label>
+                        <select id="grpSel">
+                            <option value="2">2 Groups</option>
+                            <option value="3">3 Groups</option>
+                            <option value="4" selected>4 Groups</option>
+                            <option value="5">5 Groups</option>
+                            <option value="6">6 Groups</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Number of Courts</label>
+                        <select id="courtSel">
+                            ${[1,2,3,4,5,6,7,8,9,10].map(n => `<option value="${n}" ${n===6?'selected':''}>${n} Courts</option>`).join('')}
+                        </select>
+                    </div>
+                </div>
+                <button class="btn btn-primary" style="width: 100%; font-size: 1.1rem; padding: 16px;" onclick="generateFix()">
+                    🎲 Generate Fixtures
+                </button>`;
+            }
+            
+            if (fixList.length > 0) {
+                html += `<button class="btn btn-warning" style="width: 100%; margin-top: 20px; font-size: 1.1rem; padding: 16px;" onclick="updateKnockoutTeams()">
+                    🔄 Update Knockout Teams (QF/SF/Final)
+                </button>
+                <p style="color: #8892b0; text-align: center; margin-top: 10px; font-size: 0.9rem;">
+                    Click after group/QF/SF results to populate next round teams
+                </p>
+                
+                <h3 style="margin-top: 30px; color: #00d4ff;">All Fixtures (${fixList.length})</h3>
+                <table><tr><th>Match #</th><th>Stage</th><th>Team 1</th><th>Team 2</th><th>Court</th></tr>`;
+                
+                // Sort fixtures by ID for proper display
+                const sortedFix = [...fixList].sort((a, b) => a.id - b.id);
+                sortedFix.forEach(f => {
+                    const badgeClass = f.stage === 'Group' ? 'badge-primary' : 
+                                      f.stage.includes('Quarter') ? 'badge-warning' :
+                                      f.stage.includes('Semi') ? 'badge-danger' : 'badge-success';
+                    html += `<tr>
+                        <td><strong>#${f.id}</strong></td>
+                        <td><span class="badge ${badgeClass}">${f.stage}</span></td>
+                        <td>${f.t1}</td>
+                        <td>${f.t2}</td>
+                        <td><span class="badge" style="background: #2c3e50;">${f.court}</span></td>
+                    </tr>`;
+                });
+                html += `</table>`;
+            }
+            
+            html += `</div>`;
+            document.getElementById('tabContent').innerHTML = html;
+        }
+
+        async function generateFix() {
+            const teams = await getDB(dbPath('teams')) || {};
+            const teamsList = Object.values(teams);
+            
+            if (teamsList.length < 2) {
+                alert('Need at least 2 teams');
+                return;
+            }
+            
+            const grps = parseInt(document.getElementById('grpSel').value);
+            const courts = parseInt(document.getElementById('courtSel').value);
+            
+            const courtNames = Array.from({length: courts}, (_, i) => `Court-${i+1}`);
+            const tpg = Math.ceil(teamsList.length / grps);
+            const gn = ['A','B','C','D','E','F'];
+            
+            const fixtures = {};
+            let id = 1;
+            
+            // Group stage
+            for (let gi = 0; gi < grps; gi++) {
+                const s = gi * tpg;
+                const e = Math.min(s + tpg, teamsList.length);
+                const gTeams = teamsList.slice(s, e);
+                const g = gn[gi];
+                
+                for (let i = 0; i < gTeams.length; i++) {
+                    for (let j = i + 1; j < gTeams.length; j++) {
+                        const fid = 'fix_' + id;
+                        fixtures[fid] = {
+                            id,
+                            stage: 'Group',
+                            grp: g,
+                            t1: gTeams[i].name,
+                            t2: gTeams[j].name,
+                            court: courtNames[(id-1) % courts],
+                            date: '21-02-2026'
+                        };
+                        id++;
+                    }
+                }
+            }
+            
+            // Knockouts
+            if (grps === 4) {
+                // Quarter Finals - Specific matchups
+                // QF-1: Rank 1 of Group A vs Rank 2 of Group C
+                const qf1 = 'fix_' + id++;
+                fixtures[qf1] = {
+                    id: id-1,
+                    stage: 'Quarter Final',
+                    grp: 'QF',
+                    t1: 'Group A Rank 1',
+                    t2: 'Group C Rank 2',
+                    court: courtNames[(id-2) % courts],
+                    date: '21-02-2026'
+                };
+                
+                // QF-2: Rank 2 of Group A vs Rank 1 of Group C
+                const qf2 = 'fix_' + id++;
+                fixtures[qf2] = {
+                    id: id-1,
+                    stage: 'Quarter Final',
+                    grp: 'QF',
+                    t1: 'Group A Rank 2',
+                    t2: 'Group C Rank 1',
+                    court: courtNames[(id-2) % courts],
+                    date: '21-02-2026'
+                };
+                
+                // QF-3: Rank 1 of Group B vs Rank 2 of Group D
+                const qf3 = 'fix_' + id++;
+                fixtures[qf3] = {
+                    id: id-1,
+                    stage: 'Quarter Final',
+                    grp: 'QF',
+                    t1: 'Group B Rank 1',
+                    t2: 'Group D Rank 2',
+                    court: courtNames[(id-2) % courts],
+                    date: '21-02-2026'
+                };
+                
+                // QF-4: Rank 2 of Group B vs Rank 1 of Group D
+                const qf4 = 'fix_' + id++;
+                fixtures[qf4] = {
+                    id: id-1,
+                    stage: 'Quarter Final',
+                    grp: 'QF',
+                    t1: 'Group B Rank 2',
+                    t2: 'Group D Rank 1',
+                    court: courtNames[(id-2) % courts],
+                    date: '21-02-2026'
+                };
+                
+                // Semi Finals for 4 groups
+                // SF-1: Winner of QF-1 vs Winner of QF-3
+                const sf1 = 'fix_' + id++;
+                fixtures[sf1] = {
+                    id: id-1,
+                    stage: 'Semi Final',
+                    grp: '-',
+                    t1: 'Winner QF 1',
+                    t2: 'Winner QF 3',
+                    court: courtNames[(id-2) % courts],
+                    date: '21-02-2026'
+                };
+                
+                // SF-2: Winner of QF-2 vs Winner of QF-4
+                const sf2 = 'fix_' + id++;
+                fixtures[sf2] = {
+                    id: id-1,
+                    stage: 'Semi Final',
+                    grp: '-',
+                    t1: 'Winner QF 2',
+                    t2: 'Winner QF 4',
+                    court: courtNames[(id-2) % courts],
+                    date: '21-02-2026'
+                };
+            } else if (grps === 2) {
+                // Semi Finals for 2 groups
+                // SF-1: Rank 1 of Group A vs Rank 2 of Group B
+                const sf1 = 'fix_' + id++;
+                fixtures[sf1] = {
+                    id: id-1,
+                    stage: 'Semi Final',
+                    grp: '-',
+                    t1: 'Group A Rank 1',
+                    t2: 'Group B Rank 2',
+                    court: courtNames[(id-2) % courts],
+                    date: '21-02-2026'
+                };
+                
+                // SF-2: Rank 2 of Group A vs Rank 1 of Group B
+                const sf2 = 'fix_' + id++;
+                fixtures[sf2] = {
+                    id: id-1,
+                    stage: 'Semi Final',
+                    grp: '-',
+                    t1: 'Group A Rank 2',
+                    t2: 'Group B Rank 1',
+                    court: courtNames[(id-2) % courts],
+                    date: '21-02-2026'
+                };
+            } else {
+                // For 3, 5, 6 groups - generic knockouts
+                const sf1 = 'fix_' + id++;
+                fixtures[sf1] = {
+                    id: id-1,
+                    stage: 'Semi Final',
+                    grp: '-',
+                    t1: 'Winner QF 1',
+                    t2: 'Winner QF 2',
+                    court: courtNames[(id-2) % courts],
+                    date: '21-02-2026'
+                };
+                
+                const sf2 = 'fix_' + id++;
+                fixtures[sf2] = {
+                    id: id-1,
+                    stage: 'Semi Final',
+                    grp: '-',
+                    t1: 'Winner QF 3',
+                    t2: 'Winner QF 4',
+                    court: courtNames[(id-2) % courts],
+                    date: '21-02-2026'
+                };
+            }
+            
+            // Final (same for all group configurations)
+            const finalId = 'fix_' + id++;
+            fixtures[finalId] = {
+                id: id-1,
+                stage: 'Final',
+                grp: '-',
+                t1: 'Winner SF 1',
+                t2: 'Winner SF 2',
+                court: courtNames[(id-2) % courts],
+                date: '21-02-2026'
+            };
+            
+            await saveToDB(dbPath('fixtures'), fixtures);
+            await saveToDB(dbPath('results'), {});
+            
+            alert(`Generated ${Object.keys(fixtures).length} fixtures for ${T()} tournament!`);
+            renderFix();
+        }
+
+        // ========================================
+        // RESULTS TAB (LIVE UPDATES!)
+        // ========================================
+        async function renderRes() {
+            // Listen for live updates
+            listenDB(dbPath('fixtures'), async (fixtures) => {
+                const results = await getDB(dbPath('results')) || {};
+                const fixList = Object.values(fixtures || {});
+                const pending = fixList.filter(f => !results[f.id]);
+                
+                let html = `<div class="card">
+                    <h2>${T()} Results</h2>
+                    <p style="color: #2ecc71; margin-bottom: 20px;">
+                        <span class="live-dot"></span> Live Updates - Changes sync instantly
+                    </p>`;
+                
+                if (pending.length > 0) {
+                    html += `<h3 style="color: #00d4ff;">Pending Matches (${pending.length})</h3>`;
+                    // Sort pending by match ID
+                    const sortedPending = [...pending].sort((a, b) => a.id - b.id);
+                    sortedPending.forEach(m => {
+                        html += `<div style="background: #1a1a2e; padding: 20px; border-radius: 10px; margin-bottom: 15px;">
+                            <div style="margin-bottom: 15px;">
+                                <span class="badge badge-primary">${m.stage}</span>
+                                <strong style="margin-left: 10px;">Match #${m.id}</strong>
+                            </div>
+                            <div style="display: flex; gap: 15px; margin-bottom: 10px; align-items: center;">
+                                <strong style="flex: 1;">${m.t1}</strong>
+                                <select id="r1_${m.id}" style="width: 110px; padding: 10px; background: #16213e; border: 2px solid #0f3460; border-radius: 6px; color: #e6e6e6;">
+                                    <option value="">-</option>
+                                    <option value="w">Win</option>
+                                    <option value="l">Lose</option>
+                                </select>
+                            </div>
+                            <div style="display: flex; gap: 15px; margin-bottom: 15px; align-items: center;">
+                                <strong style="flex: 1;">${m.t2}</strong>
+                                <select id="r2_${m.id}" style="width: 110px; padding: 10px; background: #16213e; border: 2px solid #0f3460; border-radius: 6px; color: #e6e6e6;">
+                                    <option value="">-</option>
+                                    <option value="w">Win</option>
+                                    <option value="l">Lose</option>
+                                </select>
+                            </div>
+                            <button class="btn btn-success" style="width: 100%;" onclick="saveRes(${m.id}, '${m.t1}', '${m.t2}')">
+                                Save Result
+                            </button>
+                        </div>`;
+                    });
+                } else {
+                    html += `<p style="color: #2ecc71; font-size: 1.1rem;">✅ All matches completed!</p>`;
+                }
+                
+                if (Object.keys(results).length > 0) {
+                    html += `<h3 style="margin-top: 30px; color: #00d4ff;">Completed (${Object.keys(results).length})</h3>`;
+                    // Sort completed by match ID
+                    const completedMatches = Object.entries(results)
+                        .map(([mid, r]) => ({mid: parseInt(mid), r, match: fixList.find(f => f.id === parseInt(mid))}))
+                        .filter(item => item.match)
+                        .sort((a, b) => a.mid - b.mid);
+                    
+                    completedMatches.forEach(({mid, r, match: m}) => {
+                            html += `<div class="match-result">
+                                <span class="${r.w === m.t1 ? 'winner' : ''}">${m.t1}</span>
+                                <strong style="color: #00d4ff;">${r.w === m.t1 ? 'WIN' : 'LOSE'}</strong>
+                                <span class="${r.w === m.t2 ? 'winner' : ''}">${m.t2}</span>
+                                <button class="btn btn-danger" style="padding: 8px 16px; font-size: 13px;" onclick="unsaveRes(${mid})">🔄 Unsave</button>
+                            </div>`;
+                    });
+                }
+                
+                html += `</div>`;
+                
+                // Update or create
+                const tc = document.getElementById('tabContent');
+                if (tc) tc.innerHTML = html;
+            });
+        }
+
+        async function saveRes(id, t1, t2) {
+            const r1 = document.getElementById(`r1_${id}`).value;
+            const r2 = document.getElementById(`r2_${id}`).value;
+            
+            if (!r1 || !r2) { alert('Select both results'); return; }
+            if (r1 === r2) { alert('One win, one lose'); return; }
+            
+            const winner = r1 === 'w' ? t1 : t2;
+            await updateDB(dbPath('results'), {[id]: {w: winner}});
+            
+            alert('Result saved! Everyone will see this update instantly.');
+        }
+
+        async function unsaveRes(id) {
+            if (confirm('Remove this result?')) {
+                const results = await getDB(dbPath('results')) || {};
+                delete results[id];
+                await saveToDB(dbPath('results'), results);
+                alert('Result removed!');
+            }
+        }
+
+        // ========================================
+        // UPDATE KNOCKOUT TEAMS
+        // ========================================
+        async function updateKnockoutTeams() {
+            const fixtures = await getDB(dbPath('fixtures')) || {};
+            const results = await getDB(dbPath('results')) || {};
+            const fixList = Object.values(fixtures);
+            const groupFix = fixList.filter(f => f.stage === 'Group');
+            
+            // Get group standings
+            const groups = [...new Set(groupFix.map(f => f.grp))].sort();
+            const groupRankings = {};
+            
+            groups.forEach(g => {
+                const gMatches = groupFix.filter(f => f.grp === g);
+                const teamNames = [...new Set([...gMatches.map(f => f.t1), ...gMatches.map(f => f.t2)])];
+                
+                const standings = teamNames.map(tn => {
+                    const matches = gMatches.filter(f => f.t1 === tn || f.t2 === tn);
+                    let w = 0, l = 0, pts = 0;
+                    matches.forEach(m => {
+                        const r = results[m.id];
+                        if (r) {
+                            if (r.w === tn) { w++; pts += 2; }
+                            else { l++; }
+                        }
+                    });
+                    return {name: tn, w, pts};
+                }).sort((a, b) => b.pts - a.pts || b.w - a.w);
+                
+                groupRankings[g] = standings.map(s => s.name);
+            });
+            
+            // Update fixtures with actual team names
+            let updated = 0;
+            
+            // Update QF from groups
+            fixList.forEach(f => {
+                if (f.stage === 'Quarter Final') {
+                    // For 4 groups: Group X Rank 1 vs Group X Rank 2
+                    groups.forEach(g => {
+                        if (f.t1.includes(`Group ${g} Rank 1`) && groupRankings[g] && groupRankings[g][0]) {
+                            f.t1 = groupRankings[g][0];
+                            updated++;
+                        }
+                        if (f.t1.includes(`Group ${g} Rank 2`) && groupRankings[g] && groupRankings[g][1]) {
+                            f.t1 = groupRankings[g][1];
+                            updated++;
+                        }
+                        if (f.t2.includes(`Group ${g} Rank 1`) && groupRankings[g] && groupRankings[g][0]) {
+                            f.t2 = groupRankings[g][0];
+                            updated++;
+                        }
+                        if (f.t2.includes(`Group ${g} Rank 2`) && groupRankings[g] && groupRankings[g][1]) {
+                            f.t2 = groupRankings[g][1];
+                            updated++;
+                        }
+                    });
+                }
+                
+                // Update SF from groups (for 2-group tournaments)
+                if (f.stage === 'Semi Final' && f.t1.includes('Group')) {
+                    groups.forEach(g => {
+                        if (f.t1.includes(`Group ${g} Rank 1`) && groupRankings[g] && groupRankings[g][0]) {
+                            f.t1 = groupRankings[g][0];
+                            updated++;
+                        }
+                        if (f.t1.includes(`Group ${g} Rank 2`) && groupRankings[g] && groupRankings[g][1]) {
+                            f.t1 = groupRankings[g][1];
+                            updated++;
+                        }
+                        if (f.t2.includes(`Group ${g} Rank 1`) && groupRankings[g] && groupRankings[g][0]) {
+                            f.t2 = groupRankings[g][0];
+                            updated++;
+                        }
+                        if (f.t2.includes(`Group ${g} Rank 2`) && groupRankings[g] && groupRankings[g][1]) {
+                            f.t2 = groupRankings[g][1];
+                            updated++;
+                        }
+                    });
+                }
+            });
+            
+            // Update SF from QF winners
+            const qfMatches = fixList.filter(f => f.stage === 'Quarter Final');
+            const qfWinners = [];
+            qfMatches.forEach(m => {
+                const r = results[m.id];
+                if (r) qfWinners.push({matchNum: m.id, winner: r.w});
+            });
+            
+            fixList.forEach(f => {
+                if (f.stage === 'Semi Final') {
+                    for (let i = 0; i < qfWinners.length; i++) {
+                        if (f.t1.includes(`Winner QF ${i+1}`) || f.t1.includes(`QF ${i+1}`)) {
+                            f.t1 = qfWinners[i].winner;
+                            updated++;
+                        }
+                        if (f.t2.includes(`Winner QF ${i+1}`) || f.t2.includes(`QF ${i+1}`)) {
+                            f.t2 = qfWinners[i].winner;
+                            updated++;
+                        }
+                    }
+                }
+            });
+            
+            // Update Final from SF winners
+            const sfMatches = fixList.filter(f => f.stage === 'Semi Final');
+            const sfWinners = [];
+            sfMatches.forEach(m => {
+                const r = results[m.id];
+                if (r) sfWinners.push({matchNum: m.id, winner: r.w});
+            });
+            
+            fixList.forEach(f => {
+                if (f.stage === 'Final') {
+                    for (let i = 0; i < sfWinners.length; i++) {
+                        if (f.t1.includes(`Winner SF ${i+1}`) || f.t1.includes(`SF ${i+1}`)) {
+                            f.t1 = sfWinners[i].winner;
+                            updated++;
+                        }
+                        if (f.t2.includes(`Winner SF ${i+1}`) || f.t2.includes(`SF ${i+1}`)) {
+                            f.t2 = sfWinners[i].winner;
+                            updated++;
+                        }
+                    }
+                }
+            });
+            
+            // Convert back to object
+            const updatedFixtures = {};
+            fixList.forEach(f => {
+                updatedFixtures['fix_' + f.id] = f;
+            });
+            
+            await saveToDB(dbPath('fixtures'), updatedFixtures);
+            alert(`Updated ${updated} team slots in knockout fixtures!\n\nCheck Fixtures, Results, and Standings tabs to see the changes.`);
+            renderFix();
+        }
+
+        // ========================================
+        // STANDINGS TAB (LIVE!)
+        // ========================================
+        async function renderStand() {
+            listenDB(dbPath('fixtures'), async (fixtures) => {
+                const results = await getDB(dbPath('results')) || {};
+                const teams = await getDB(dbPath('teams')) || {};
+                const teamsList = Object.values(teams || {});
+                const fixList = Object.values(fixtures || {});
+                
+                if (teamsList.length === 0) {
+                    document.getElementById('tabContent').innerHTML = `<div class="card"><h2>Standings</h2><p>No teams yet</p></div>`;
+                    return;
+                }
+                
+                const groupFix = fixList.filter(f => f.stage === 'Group');
+                const groups = [...new Set(groupFix.map(f => f.grp))].sort();
+                
+                let html = `<div class="card">
+                    <h2>${T()} Complete Standings</h2>
+                    <p style="color: #2ecc71; margin-bottom: 20px;">
+                        <span class="live-dot"></span> Live Updates - All Stages
+                    </p>`;
+                
+                // GROUP STAGE STANDINGS
+                if (groups.length > 0) {
+                    html += `<h3 style="color: #00d4ff; border-bottom: 2px solid #00d4ff; padding-bottom: 10px; margin-bottom: 20px;">📋 GROUP STAGE STANDINGS</h3>`;
+                    
+                    groups.forEach(g => {
+                        const gMatches = groupFix.filter(f => f.grp === g);
+                        const teamNames = [...new Set([...gMatches.map(f => f.t1), ...gMatches.map(f => f.t2)])];
+                        
+                        const standings = teamNames.map(tn => {
+                            const matches = gMatches.filter(f => f.t1 === tn || f.t2 === tn);
+                            let w = 0, l = 0, pts = 0;
+                            matches.forEach(m => {
+                                const r = results[m.id];
+                                if (r) {
+                                    if (r.w === tn) { w++; pts += 2; }
+                                    else { l++; }
+                                }
+                            });
+                            return {name: tn, played: matches.filter(m => results[m.id]).length, w, l, pts};
+                        }).sort((a, b) => b.pts - a.pts || b.w - a.w);
+                        
+                        html += `<h4 style="color: #8892b0; margin-top: 20px;">Group ${g}</h4>
+                        <table><tr><th>Rank</th><th>Team</th><th>Played</th><th>Wins</th><th>Losses</th><th>Points</th></tr>`;
+                        standings.forEach((s, i) => {
+                            const qualified = i < 2;
+                            const style = qualified ? 'background: rgba(46, 204, 113, 0.1);' : '';
+                            html += `<tr style="${style}">
+                                <td><strong>${i+1}</strong></td>
+                                <td>${s.name}${qualified ? ' ✅' : ''}</td>
+                                <td>${s.played}</td>
+                                <td>${s.w}</td>
+                                <td>${s.l}</td>
+                                <td><strong style="color: #00d4ff;">${s.pts}</strong></td>
+                            </tr>`;
+                        });
+                        html += `</table>`;
+                    });
+                }
+                
+                // QUARTER FINAL STANDINGS
+                const qfMatches = fixList.filter(f => f.stage === 'Quarter Final');
+                const qfResults = qfMatches.filter(m => results[m.id]);
+                if (qfResults.length > 0) {
+                    html += `<h3 style="color: #f39c12; border-bottom: 2px solid #f39c12; padding-bottom: 10px; margin-top: 40px; margin-bottom: 20px;">🏆 QUARTER FINAL RESULTS</h3>
+                    <table><tr><th>Match</th><th>Winner (SF Qualified)</th><th>Runner-up (Eliminated)</th></tr>`;
+                    qfResults.forEach((m, i) => {
+                        const r = results[m.id];
+                        const loser = r.w === m.t1 ? m.t2 : m.t1;
+                        html += `<tr>
+                            <td><strong>QF ${i+1}</strong></td>
+                            <td class="winner" style="background: rgba(46, 204, 113, 0.1);">${r.w} ✅</td>
+                            <td style="color: #8892b0;">${loser}</td>
+                        </tr>`;
+                    });
+                    html += `</table>`;
+                }
+                
+                // SEMI FINAL STANDINGS
+                const sfMatches = fixList.filter(f => f.stage === 'Semi Final');
+                const sfResults = sfMatches.filter(m => results[m.id]);
+                if (sfResults.length > 0) {
+                    html += `<h3 style="color: #e94560; border-bottom: 2px solid #e94560; padding-bottom: 10px; margin-top: 40px; margin-bottom: 20px;">🥉 SEMI FINAL RESULTS</h3>
+                    <table><tr><th>Match</th><th>Winner (Finalist)</th><th>Runner-up (3rd/4th)</th></tr>`;
+                    sfResults.forEach((m, i) => {
+                        const r = results[m.id];
+                        const loser = r.w === m.t1 ? m.t2 : m.t1;
+                        html += `<tr>
+                            <td><strong>SF ${i+1}</strong></td>
+                            <td class="winner" style="background: rgba(255, 215, 0, 0.1);">${r.w} ✅</td>
+                            <td style="color: #8892b0;">${loser}</td>
+                        </tr>`;
+                    });
+                    html += `</table>`;
+                }
+                
+                // FINAL STANDINGS
+                const finalMatch = fixList.find(f => f.stage === 'Final');
+                if (finalMatch && results[finalMatch.id]) {
+                    const r = results[finalMatch.id];
+                    const loser = r.w === finalMatch.t1 ? finalMatch.t2 : finalMatch.t1;
+                    html += `<h3 style="color: #2ecc71; border-bottom: 2px solid #2ecc71; padding-bottom: 10px; margin-top: 40px; margin-bottom: 20px;">🏅 TOURNAMENT FINAL</h3>
+                    <table style="font-size: 1.1rem;"><tr><th>Position</th><th>Team</th></tr>`;
+                    html += `<tr style="background: linear-gradient(135deg, rgba(255, 215, 0, 0.2), rgba(255, 215, 0, 0.1));">
+                        <td><strong style="color: #FFD700; font-size: 1.3rem;">🏆 CHAMPION</strong></td>
+                        <td class="winner" style="font-size: 1.2rem;"><strong>${r.w}</strong></td>
+                    </tr>`;
+                    html += `<tr style="background: linear-gradient(135deg, rgba(192, 192, 192, 0.2), rgba(192, 192, 192, 0.1));">
+                        <td><strong style="color: #C0C0C0; font-size: 1.2rem;">🥈 RUNNER-UP</strong></td>
+                        <td style="font-size: 1.1rem;"><strong>${loser}</strong></td>
+                    </tr>`;
+                    html += `</table>`;
+                }
+                
+                html += `</div>`;
+                const tc = document.getElementById('tabContent');
+                if (tc) tc.innerHTML = html;
+            });
+        }
+
+        // ========================================
+        // PDF DOWNLOAD FUNCTIONS
+        // ========================================
+        
+        async function downloadFixturesPDF() {
+            const fixtures = await getDB(dbPath('fixtures')) || {};
+            const fixList = Object.values(fixtures).sort((a, b) => a.id - b.id);
+            
+            if (fixList.length === 0) {
+                alert('No fixtures to download');
+                return;
+            }
+            
+            const tn = T();
+            const groupFix = fixList.filter(f => f.stage === 'Group');
+            const koFix = fixList.filter(f => f.stage !== 'Group');
+            
+            let html = '<!DOCTYPE html><html><head><title>' + tn + ' Fixtures</title>';
+            html += '<style>body{font-family:Arial;padding:30px}h1{text-align:center;color:#0f3460;border-bottom:3px solid #00d4ff;padding-bottom:15px}';
+            html += '.company{font-size:1.3rem;font-weight:bold;color:#00d4ff;text-align:center}.apl{font-size:1.1rem;color:#e94560;font-weight:600;text-align:center;margin-top:5px}';
+            html += 'h2{color:#0f3460;margin-top:30px;border-bottom:2px solid #00d4ff;padding-bottom:8px}h3{color:#666;margin-top:20px}';
+            html += 'table{width:100%;border-collapse:collapse;margin:20px 0}th,td{border:1px solid #ddd;padding:12px;text-align:left}';
+            html += 'th{background:#0f3460;color:white}tr:nth-child(even){background:#f9f9f9}</style></head><body>';
+            html += '<h1>🏸 ' + tn + ' Tournament Fixtures</h1>';
+            html += '<p class="company">S K R & SMCS</p><p class="apl">Auditor\'s Premier League (APL)</p>';
+            html += '<p style="text-align:center;margin-top:15px;color:#666">Total Matches: ' + fixList.length + '</p>';
+            
+            if (groupFix.length > 0) {
+                const groups = [...new Set(groupFix.map(f => f.grp))].sort();
+                html += '<h2>Group Stage Fixtures</h2>';
+                groups.forEach(g => {
+                    const gMatches = groupFix.filter(f => f.grp === g);
+                    html += '<h3>Group ' + g + '</h3><table><tr><th>Match #</th><th>Team 1</th><th>Team 2</th><th>Court</th></tr>';
+                    gMatches.forEach(m => {
+                        html += '<tr><td><strong>#' + m.id + '</strong></td><td>' + m.t1 + '</td><td>' + m.t2 + '</td><td>' + m.court + '</td></tr>';
+                    });
+                    html += '</table>';
+                });
+            }
+            
+            if (koFix.length > 0) {
+                html += '<h2>Knockout Stage</h2><table><tr><th>Match #</th><th>Stage</th><th>Team 1</th><th>Team 2</th><th>Court</th></tr>';
+                koFix.forEach(m => {
+                    html += '<tr><td><strong>#' + m.id + '</strong></td><td>' + m.stage + '</td><td>' + m.t1 + '</td><td>' + m.t2 + '</td><td>' + m.court + '</td></tr>';
+                });
+                html += '</table>';
+            }
+            
+            html += '<p style="text-align:center;margin-top:50px;color:#888">Generated: ' + new Date().toLocaleString() + '</p></body></html>';
+            
+            const w = window.open('', '_blank');
+            w.document.write(html);
+            w.document.close();
+            setTimeout(() => w.print(), 250);
+        }
+
+        async function downloadResultsPDF() {
+            const fixtures = await getDB(dbPath('fixtures')) || {};
+            const results = await getDB(dbPath('results')) || {};
+            const fixList = Object.values(fixtures).sort((a, b) => a.id - b.id);
+            const completed = fixList.filter(f => results[f.id]);
+            
+            if (completed.length === 0) {
+                alert('No results to download');
+                return;
+            }
+            
+            const tn = T();
+            const groupMatches = completed.filter(f => f.stage === 'Group');
+            const koMatches = completed.filter(f => f.stage !== 'Group');
+            
+            let html = '<!DOCTYPE html><html><head><title>' + tn + ' Results</title>';
+            html += '<style>body{font-family:Arial;padding:30px}h1{text-align:center;color:#0f3460;border-bottom:3px solid #00d4ff;padding-bottom:15px}';
+            html += '.company{font-size:1.3rem;font-weight:bold;color:#00d4ff;text-align:center}.apl{font-size:1.1rem;color:#e94560;font-weight:600;text-align:center;margin-top:5px}';
+            html += 'h2{color:#0f3460;margin-top:30px;border-bottom:2px solid #00d4ff;padding-bottom:8px}h3{color:#666;margin-top:20px}';
+            html += 'table{width:100%;border-collapse:collapse;margin:20px 0}th,td{border:1px solid #ddd;padding:12px;text-align:left}';
+            html += 'th{background:#0f3460;color:white}tr:nth-child(even){background:#f9f9f9}.winner{color:#2ecc71;font-weight:bold}</style></head><body>';
+            html += '<h1>📊 ' + tn + ' Tournament Results</h1>';
+            html += '<p class="company">S K R & SMCS</p><p class="apl">Auditor\'s Premier League (APL)</p>';
+            html += '<p style="text-align:center;margin-top:15px;color:#666">Completed: ' + completed.length + '</p>';
+            
+            if (groupMatches.length > 0) {
+                const groups = [...new Set(groupMatches.map(f => f.grp))].sort();
+                html += '<h2>Group Stage Results</h2>';
+                groups.forEach(g => {
+                    const gMatches = groupMatches.filter(f => f.grp === g);
+                    html += '<h3>Group ' + g + '</h3><table><tr><th>Match #</th><th>Winner</th><th>Loser</th></tr>';
+                    gMatches.forEach(m => {
+                        const r = results[m.id];
+                        const loser = r.w === m.t1 ? m.t2 : m.t1;
+                        html += '<tr><td><strong>#' + m.id + '</strong></td><td class="winner">' + r.w + '</td><td>' + loser + '</td></tr>';
+                    });
+                    html += '</table>';
+                });
+            }
+            
+            if (koMatches.length > 0) {
+                html += '<h2>Knockout Results</h2><table><tr><th>Match #</th><th>Stage</th><th>Winner</th><th>Loser</th></tr>';
+                koMatches.forEach(m => {
+                    const r = results[m.id];
+                    const loser = r.w === m.t1 ? m.t2 : m.t1;
+                    html += '<tr><td><strong>#' + m.id + '</strong></td><td>' + m.stage + '</td><td class="winner">' + r.w + '</td><td>' + loser + '</td></tr>';
+                });
+                html += '</table>';
+            }
+            
+            html += '<p style="text-align:center;margin-top:50px;color:#888">Generated: ' + new Date().toLocaleString() + '</p></body></html>';
+            
+            const w = window.open('', '_blank');
+            w.document.write(html);
+            w.document.close();
+            setTimeout(() => w.print(), 250);
+        }
+
+        async function downloadStandingsPDF() {
+            const fixtures = await getDB(dbPath('fixtures')) || {};
+            const results = await getDB(dbPath('results')) || {};
+            const teams = await getDB(dbPath('teams')) || {};
+            const teamsList = Object.values(teams);
+            const fixList = Object.values(fixtures);
+            
+            if (teamsList.length === 0) {
+                alert('No standings to download');
+                return;
+            }
+            
+            const tn = T();
+            const groupFix = fixList.filter(f => f.stage === 'Group');
+            const groups = [...new Set(groupFix.map(f => f.grp))].sort();
+            
+            let html = '<!DOCTYPE html><html><head><title>' + tn + ' Standings</title>';
+            html += '<style>body{font-family:Arial;padding:30px}h1{text-align:center;color:#0f3460;border-bottom:3px solid #00d4ff;padding-bottom:15px}';
+            html += '.company{font-size:1.3rem;font-weight:bold;color:#00d4ff;text-align:center}.apl{font-size:1.1rem;color:#e94560;font-weight:600;text-align:center;margin-top:5px}';
+            html += 'h2{color:#0f3460;margin-top:35px;border-bottom:2px solid #00d4ff;padding-bottom:8px}h3{color:#666;margin-top:20px}';
+            html += 'table{width:100%;border-collapse:collapse;margin:15px 0}th,td{border:1px solid #ddd;padding:12px;text-align:left}';
+            html += 'th{background:#0f3460;color:white}tr:nth-child(even){background:#f9f9f9}.qualified{background:#d4f4dd!important}';
+            html += '.winner{color:#2ecc71;font-weight:bold}.champion{background:#fff9e6!important;font-weight:bold}</style></head><body>';
+            html += '<h1>🏆 ' + tn + ' Tournament Standings</h1>';
+            html += '<p class="company">S K R & SMCS</p><p class="apl">Auditor\'s Premier League (APL)</p>';
+            
+            if (groups.length > 0) {
+                html += '<h2>GROUP STAGE STANDINGS</h2>';
+                groups.forEach(g => {
+                    const gMatches = groupFix.filter(f => f.grp === g);
+                    const teamNames = [...new Set([...gMatches.map(f => f.t1), ...gMatches.map(f => f.t2)])];
+                    const standings = teamNames.map(tn => {
+                        const matches = gMatches.filter(f => f.t1 === tn || f.t2 === tn);
+                        let w = 0, l = 0, pts = 0;
+                        matches.forEach(m => {
+                            const r = results[m.id];
+                            if (r) {
+                                if (r.w === tn) { w++; pts += 2; }
+                                else { l++; }
+                            }
+                        });
+                        return {name: tn, played: matches.filter(m => results[m.id]).length, w, l, pts};
+                    }).sort((a, b) => b.pts - a.pts || b.w - a.w);
+                    
+                    html += '<h3>Group ' + g + '</h3><table><tr><th>Rank</th><th>Team</th><th>Played</th><th>Wins</th><th>Losses</th><th>Points</th></tr>';
+                    standings.forEach((s, i) => {
+                        const qualified = i < 2 ? ' class="qualified"' : '';
+                        html += '<tr' + qualified + '><td><strong>' + (i+1) + '</strong></td><td>' + s.name + (i < 2 ? ' ✓' : '') + '</td><td>' + s.played + '</td><td>' + s.w + '</td><td>' + s.l + '</td><td><strong>' + s.pts + '</strong></td></tr>';
+                    });
+                    html += '</table>';
+                });
+            }
+            
+            const qfMatches = fixList.filter(f => f.stage === 'Quarter Final');
+            const qfResults = qfMatches.filter(m => results[m.id]);
+            if (qfResults.length > 0) {
+                html += '<h2>QUARTER FINAL RESULTS</h2><table><tr><th>Match</th><th>Winner (SF Qualified)</th><th>Runner-up</th></tr>';
+                qfResults.forEach((m, i) => {
+                    const r = results[m.id];
+                    const loser = r.w === m.t1 ? m.t2 : m.t1;
+                    html += '<tr><td><strong>QF ' + (i+1) + '</strong></td><td class="winner">' + r.w + ' ✓</td><td>' + loser + '</td></tr>';
+                });
+                html += '</table>';
+            }
+            
+            const sfMatches = fixList.filter(f => f.stage === 'Semi Final');
+            const sfResults = sfMatches.filter(m => results[m.id]);
+            if (sfResults.length > 0) {
+                html += '<h2>SEMI FINAL RESULTS</h2><table><tr><th>Match</th><th>Winner (Finalist)</th><th>Runner-up</th></tr>';
+                sfResults.forEach((m, i) => {
+                    const r = results[m.id];
+                    const loser = r.w === m.t1 ? m.t2 : m.t1;
+                    html += '<tr><td><strong>SF ' + (i+1) + '</strong></td><td class="winner">' + r.w + ' ✓</td><td>' + loser + '</td></tr>';
+                });
+                html += '</table>';
+            }
+            
+            const finalMatch = fixList.find(f => f.stage === 'Final');
+            if (finalMatch && results[finalMatch.id]) {
+                const r = results[finalMatch.id];
+                const loser = r.w === finalMatch.t1 ? finalMatch.t2 : finalMatch.t1;
+                html += '<h2>TOURNAMENT FINAL</h2><table><tr><th>Position</th><th>Team</th></tr>';
+                html += '<tr class="champion"><td>🏆 CHAMPION</td><td>' + r.w + '</td></tr>';
+                html += '<tr><td>🥈 RUNNER-UP</td><td>' + loser + '</td></tr></table>';
+            }
+            
+            html += '<p style="text-align:center;margin-top:50px;color:#888">Generated: ' + new Date().toLocaleString() + '</p></body></html>';
+            
+            const w = window.open('', '_blank');
+            w.document.write(html);
+            w.document.close();
+            setTimeout(() => w.print(), 250);
+        }
+
+    </script>
+</body>
+</html>
